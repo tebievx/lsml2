@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  mlflow:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/project
+    command: ./run_mlflow.sh
+
+  redis:
+    image: "redis:7.0.0-alpine"
+
+  celery:
+    build: .
+    depends_on:
+      - mlflow
+      - redis
+    volumes:
+      - ./:/project
+    environment:
+      REDIS_HOST: redis
+      MLFLOW_HOST: mlflow
+      MLFLOW_PORT: 5000
+    command: ./run_celery.sh
+
+  flask:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/project
+    depends_on:
+      - celery
+    environment:
+      REDIS_HOST: redis
+      MLFLOW_HOST: mlflow
+      MLFLOW_PORT: 5000
+    command: ./run_flask.sh
+
+  jupyter:
+    build: .
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./:/project
+    depends_on:
+      - mlflow
+    environment:
+      MLFLOW_HOST: mlflow
+      MLFLOW_PORT: 5000
+    command: ./run_jupyter.sh
